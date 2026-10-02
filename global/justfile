@@ -1,0 +1,249 @@
+# Set shell to zsh
+set shell := ["zsh", "-uc"]
+set dotenv-load
+set export
+set default-list
+
+# Aliases
+alias reload := new-shell
+alias cgds := cgds-repos
+alias pah := pah-repos
+alias personal := personal-repos
+alias websites := website-repos
+
+# Variables
+home := home_directory()
+git_repos := home + "/Documents/Git-Repos"
+cgds_repos := git_repos + "/cgds-repos"
+pah_repos := git_repos + "/pah-repos"
+personal_repos := git_repos + "/personal-repos"
+website_repos := git_repos + "/website-repos"
+repo_notes_template := personal_repos + "/repo-notes-template"
+github_templates_repo := git_repos + "/misc/github-templates-main"
+
+# Scan current repo for duplicate code (classes included)
+[group('code-quality')]
+[no-cd]
+find-dupes:
+    dupehound scan --json --include-classes
+
+# Serve Jekyll site
+[group('dev')]
+[no-cd]
+serve-jekyll:
+    bundle exec jekyll serve
+
+# Lint and fix Markdown files
+[group('code-quality')]
+[no-cd]
+lint-md:
+    npx markdownlint-cli2 "**/*.md" --fix
+
+# Open a new interactive shell
+new-shell:
+    exec zsh -i
+
+# Clean up common temp files
+[group('code-quality')]
+[no-cd]
+clean-temp:
+    find . -type f -name "*.pyc" -delete
+    find . -type d -name "__pycache__" -delete
+    find . -type d -name ".pytest_cache" -exec rm -rf {} +
+    find . -type f -name ".DS_Store" -delete
+
+# Fetch all remotes
+[group('git')]
+[no-cd]
+fetch:
+    git fetch --all
+
+# Install the current repository's configured Git hook
+[group('git-hooks')]
+[no-cd]
+hooks-install:
+    @command -v prek >/dev/null 2>&1 || { echo "Required tool not found: prek" >&2; exit 1; }
+    @git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "Run this command inside a Git repository." >&2; exit 1; }
+    prek install
+
+# Run hooks against currently staged files
+[group('git-hooks')]
+[no-cd]
+hooks-run:
+    @command -v prek >/dev/null 2>&1 || { echo "Required tool not found: prek" >&2; exit 1; }
+    prek run
+
+# Run hooks against every tracked file; formatters may modify files
+[group('git-hooks')]
+[no-cd]
+[confirm]
+hooks-all:
+    @command -v prek >/dev/null 2>&1 || { echo "Required tool not found: prek" >&2; exit 1; }
+    prek run --all-files
+
+# Report available hook updates without modifying the configuration
+[group('git-hooks')]
+[no-cd]
+hooks-update-check:
+    @command -v prek >/dev/null 2>&1 || { echo "Required tool not found: prek" >&2; exit 1; }
+    prek update --check
+
+# Update pinned hook versions; review the resulting diff afterward
+[group('git-hooks')]
+[no-cd]
+[confirm]
+hooks-update:
+    @command -v prek >/dev/null 2>&1 || { echo "Required tool not found: prek" >&2; exit 1; }
+    prek update
+
+# Sync private notes
+[group('scaffolding')]
+[no-cd]
+notekeeper:
+    bash "{{home}}/bin/notekeeper.sh"
+
+# Add the private repo-notes scaffold to the current project
+[group('scaffolding')]
+[no-cd]
+[confirm]
+add-notes:
+    uvx copier copy "{{repo_notes_template}}" .
+
+# Add a README from the shared template repo.
+# Default to the main project README template, but allow the lighter folder template.
+[group('scaffolding')]
+[no-cd]
+[confirm]
+add-readme README_TYPE="main":
+    if [[ -e README.md ]]; then \
+      echo "README.md already exists. Remove it first if you want to replace it." >&2; \
+      exit 1; \
+    fi
+    if [[ "{{README_TYPE}}" == "main" ]]; then \
+      cp "{{github_templates_repo}}/readme-templates/project_readme_temp.md" README.md; \
+    elif [[ "{{README_TYPE}}" == "folder" ]]; then \
+      cp "{{github_templates_repo}}/readme-templates/folder_readme_temp.md" README.md; \
+    else \
+      echo "Unknown README type: {{README_TYPE}}. Use 'main' or 'folder'." >&2; \
+      exit 1; \
+    fi
+    echo "Created README.md from the {{README_TYPE}} template."
+
+# Download AGENTS.md into the current directory
+[group('scaffolding')]
+[no-cd]
+[confirm]
+add-agents:
+    curl --fail --location "https://gist.githubusercontent.com/sdhutchins/8a31d6bd4f3dc0bd5a6dbf4fb715de7e/raw/b735dcdf1f6fb901ebe1b58b83d2be07251edd69/AGENTS.md" --output AGENTS.md
+
+# Create a new CGDS repo from the template and clone it locally
+[group('git')]
+[arg("REPO_NAME", help="New repository name under uab-cgds-worthey", pattern="[A-Za-z0-9._-]+")]
+[confirm]
+mk-cgds-repo REPO_NAME:
+    mkdir -p {{cgds_repos}}
+    cd {{cgds_repos}} && gh repo create "uab-cgds-worthey/{{REPO_NAME}}" --template "uab-cgds-worthey/cgds_repo_template" --clone --private
+
+# Create virtual environment
+[group('python')]
+[no-cd]
+pyvenv NAME="venv":
+    python3 -m venv {{NAME}}
+    @echo "Run: source {{NAME}}/bin/activate"
+
+# Open a subshell with the virtual environment activated
+[group('python')]
+[no-cd]
+activate-pyvenv NAME="venv":
+    source {{NAME}}/bin/activate && exec zsh -i
+
+# Build Python package
+[group('python')]
+[no-cd]
+build-py:
+    python3 -m build
+
+# Full build and upload to TestPyPI
+[group('python')]
+[no-cd]
+publish-test-pypi: build-py
+    python3 -m twine upload --repository testpypi dist/*
+
+# Full build and upload to PyPI
+[group('python')]
+[no-cd]
+publish-pypi: build-py
+    twine upload dist/*
+
+# Run Streamlit app (run from project root so venv is found; use -m to avoid broken launcher shebang)
+[group('dev')]
+[no-cd]
+run-streamlit APP="app.py":
+    venv/bin/streamlit run {{APP}}
+
+# Navigate to CGDS projects
+[group('navigation')]
+cgds-repos:
+    cd {{cgds_repos}} && exec zsh -i
+
+# Navigate to PAH projects
+[group('navigation')]
+pah-repos:
+    cd {{pah_repos}} && exec zsh -i
+
+# Navigate to personal repos
+[group('navigation')]
+personal-repos:
+    cd {{personal_repos}} && exec zsh -i
+
+# Navigate to website repos
+[group('navigation')]
+website-repos:
+    cd {{website_repos}} && exec zsh -i
+
+# Update Conda and all packages in base environment
+[group('updates')]
+update-conda-all:
+    conda update -n base --all
+
+# Update Homebrew and all packages
+[group('updates')]
+update-brew:
+    brew update
+    brew upgrade
+    brew cleanup
+
+# Update Mamba
+[group('updates')]
+update-mamba:
+    conda update -n base mamba
+
+# System health check
+[group('system')]
+doctor:
+    @echo "== Toolchain versions =="
+    python3 --version
+    git --version
+    node --version || true
+    ruby --version || true
+
+    @echo "\n== Binary resolution =="
+    which python3
+    which pip3
+    which git
+    which ruby
+
+# Update zsh
+[group('updates')]
+bump-zsh:
+    omz update
+
+# Backup file system
+[group('system')]
+backup:
+    "{{home}}/rclone_backup.sh"
+
+# Organize Downloads
+[group('system')]
+organize:
+    python3 "{{home}}/bin/organize_downloads.py"
