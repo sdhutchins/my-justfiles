@@ -140,14 +140,16 @@ for its build semantics.
 
 ## Testing
 
-Run the interface tests:
+Run the same interface tests used by GitHub Actions:
 
 ```bash
 bash tests/test-justfiles.sh
 ```
 
 The tests use temporary fake executables to verify generated commands without
-running R, Python, Nextflow, Docker, or GitHub Actions workloads.
+running R, Python, Nextflow, Docker, or GitHub Actions workloads. The
+`Test justfiles` workflow runs the test on pushes, pull requests, and manual
+dispatches.
 
 ## Contributing
 
