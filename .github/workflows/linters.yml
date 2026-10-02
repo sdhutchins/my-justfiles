@@ -1,26 +1,37 @@
-name: Linting- Markdown,Shell
+name: Lint Markdown and shell
 
 on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  markdown-linting:
-    name: Markdown lint
+  super-linter:
+    name: Markdown and ShellCheck
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      statuses: write
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: markdownlint-cli
-        uses: nosborn/github-action-markdown-cli@v3.3.0
+        uses: actions/checkout@v7
         with:
-          files: .
-          config_file: ".markdownlint.json"
-          # dot: false
-          # ignore_files: '".git*/**"'
+          fetch-depth: 0
+          persist-credentials: false
 
+      - name: Run Super-Linter
+        uses: github/super-linter@ce838ab356d25fc8e83a16fa6d1fc6f583e14e87 # Super-Linter v8.6.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLE_GITHUB_PULL_REQUEST_SUMMARY_COMMENT: false
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_BASH: true
+          LINTER_RULES_PATH: .
+          MARKDOWN_CONFIG_FILE: .markdownlint.json
 
   markdown-check-links:
     name: Markdown - checking links
@@ -30,11 +41,3 @@ jobs:
       - uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           config-file: ".markdownlint.json"
-
-  shellcheck:
-    name: Shellcheck
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
