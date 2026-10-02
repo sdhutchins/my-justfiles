@@ -1,5 +1,8 @@
 # My Justfiles
 
+[![Test](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/test-justfiles.yml?branch=main&label=Test)](https://github.com/sdhutchins/my-justfiles/actions/workflows/test-justfiles.yml)
+[![Linting](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/linters.yml?branch=main&label=Linting)](https://github.com/sdhutchins/my-justfiles/actions/workflows/linters.yml)
+
 A personal library of reusable [`just`](https://just.systems/) files for individual projects
 and commands used across projects.
 
