@@ -11,11 +11,36 @@ than make and helps improve reproducibility within and across projects on my sys
 ```text
 global/
     Personal commands used across repositories and from the home directory.
+
+project-specific/
+    Copyable templates organized by ecosystem and project archetype.
+```
+
+The first project-specific templates cover the project types used most often:
+
+```text
+project-specific/
+└── r/
+    └── package/
+        └── justfile
+```
+
+New templates should follow the same hierarchy:
+
+```text
+project-specific/<ecosystem>/<project-archetype>/justfile
 ```
 
 ## Requirements
 
-The global justfile requires `just`. Install additional tools as needed for the recipes you use.
+Every template requires `just`. Install additional tools as needed for the recipes you use.
+
+### R Package
+
+- R, including `Rscript`
+- R packages: `lintr`, `devtools`, `rcmdcheck`, and `pkgdown`
+- `actionlint` for GitHub Actions validation in `just lintr`
+- `act` and a Docker-compatible runtime for the `actions-*` recipes
 
 ### Global Justfile
 
@@ -29,6 +54,18 @@ The local test requires Bash and `just`. ShellCheck is also recommended when
 modifying the test script.
 
 ## Usage
+
+Copy a template into a project:
+
+```bash
+cp project-specific/r/package/justfile ~/projects/my-package/justfile
+```
+
+Inspect a template without copying it:
+
+```bash
+just --justfile project-specific/r/package/justfile --list
+```
 
 The file at `global/justfile` is a tracked copy of my personal justfile used
 from the `home` directory. Copy it to `~/.justfile` only after reviewing paths and
@@ -57,6 +94,21 @@ reports available hook updates without editing the configuration, while
 I also use these tools to check my projects:
 
 - [prek](https://prek.j178.dev/) manages Git hooks. I use it to run each repository's formatting and code checks.
+- [actionlint](https://github.com/rhysd/actionlint) checks GitHub Actions workflow files for syntax and expression errors.
+- [act](https://nektosact.com/) runs supported GitHub Actions jobs locally so I can test and debug workflows on my machine.
+- [GitHub Actions](https://docs.github.com/en/actions) runs automated checks when I push changes or open pull requests.
+
+## Shared Local and CI Commands
+
+Project templates provide short commands for both local use and GitHub Actions.
+For example, an R package developer and the package's workflow can both run:
+
+```bash
+just check
+```
+
+Defining the underlying command once in the project `justfile` keeps local and
+CI instructions consistent and avoids duplication in documentation and workflow YAML.
 
 ## Testing
 
@@ -67,6 +119,11 @@ bash tests/test-justfiles.sh
 ```
 
 The tests use temporary fake executables to verify generated commands.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance. Keep new
+templates focused, explicit, and understandable from a single file.
 
 ## License
 

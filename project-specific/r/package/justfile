@@ -1,0 +1,51 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set default-list
+
+[private]
+require-tool tool:
+    command -v "{{ tool }}" >/dev/null 2>&1 || { echo "Required tool not found: {{ tool }}" >&2; exit 1; }
+
+[group('quality')]
+lintr: (require-tool "Rscript") (require-tool "actionlint")
+    actionlint
+    Rscript -e 'lintr::lint_package()'
+
+[group('quality')]
+test: (require-tool "Rscript")
+    Rscript -e 'devtools::test()'
+
+[group('quality')]
+check: (require-tool "Rscript")
+    Rscript -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "warning")'
+
+[group('development')]
+mk-docs: (require-tool "Rscript")
+    Rscript -e 'devtools::document()'
+
+[group('development')]
+build-site: (require-tool "Rscript")
+    Rscript -e 'pkgdown::build_site()'
+
+[group('quality')]
+ci-local: lintr test check
+
+[group('github-actions')]
+actions-list: (require-tool "act")
+    act --list
+
+[group('github-actions')]
+actions-pr: (require-tool "act")
+    act pull_request
+
+[group('github-actions')]
+actions-push: (require-tool "act")
+    act push
+
+[group('github-actions')]
+actions-dispatch: (require-tool "act")
+    act workflow_dispatch
+
+# Use this on Apple Silicon when the workflow image requires amd64.
+[group('github-actions')]
+actions-pr-amd64: (require-tool "act")
+    act pull_request --container-architecture linux/amd64

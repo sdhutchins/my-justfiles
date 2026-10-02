@@ -1,35 +1,20 @@
+# Contributing to My Justfiles
 
-# Contributing to Base Repository Template
+Contributions should keep the library simple, browsable, and easy to copy from.
 
-Thank you for your interest in contributing to the **Base Repository Template** project! Contributions are welcome
-and appreciated. Please follow these simple steps to get started:
+## Adding or Updating a Template
 
-## How to Contribute
-
-1. **Fork the repository** and clone it to your local machine.
-2. Create a new branch for your changes:
-
-   ```bash
-   git checkout -b your-feature-name
-   ```
-
-3. Make your changes and commit them with a clear message:
+1. Place project templates under
+   `project-specific/<ecosystem>/<project-archetype>/justfile`.
+2. Keep recipes short, explicit, and free of hidden side effects.
+3. Check required tools without installing them automatically.
+4. Give destructive recipes clear names and require deliberate invocation.
+5. Validate the template before opening a pull request:
 
    ```bash
-   git commit -m "Add a brief description of your changes"
+   just --justfile path/to/justfile --list
+   just --fmt --check --justfile path/to/justfile
    ```
 
-4. Push your branch to your fork:
-
-   ```bash
-   git push origin your-feature-name
-   ```
-
-5. Open a pull request (PR) to the `main` branch of this repository.
-
-## Reporting Issues
-
-If you encounter a bug or have a suggestion, open an issue in
-the [issues](https://github.com/sdhutchins/base-repository-template/issues) tab and provide details.
-
-Thank you for contributing!
+Open issues and pull requests in the
+[my-justfiles repository](https://github.com/sdhutchins/my-justfiles).

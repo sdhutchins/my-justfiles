@@ -5,6 +5,7 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly repository_root
 readonly global_justfile="${repository_root}/global/justfile"
+readonly r_justfile="${repository_root}/project-specific/r/package/justfile"
 just_binary="$(command -v just || true)"
 readonly just_binary
 
@@ -55,15 +56,30 @@ require_just() {
 }
 
 test_expected_files() {
-    [[ -f "${global_justfile}" ]] || fail "Expected justfile not found: ${global_justfile}"
+    local justfile
+
+    for justfile in \
+        "${global_justfile}" \
+        "${r_justfile}"; do
+        [[ -f "${justfile}" ]] || fail "Expected justfile not found: ${justfile}"
+    done
 
     pass "expected justfiles exist"
 }
 
 test_parsing_and_formatting() {
-    "${just_binary}" --justfile "${global_justfile}" --list >/dev/null
+    local justfile
 
-    pass "global justfile parses"
+    for justfile in \
+        "${global_justfile}" \
+        "${r_justfile}"; do
+        "${just_binary}" --justfile "${justfile}" --list >/dev/null
+    done
+
+    # The global file intentionally preserves the formatting of ~/.justfile.
+    "${just_binary}" --justfile "${r_justfile}" --fmt --check
+
+    pass "justfiles parse and project templates are formatted"
 }
 
 test_recipe_interfaces() {
@@ -72,11 +88,17 @@ test_recipe_interfaces() {
         "$("${just_binary}" --justfile "${global_justfile}" --summary)" \
         "global recipe interface changed"
 
+    assert_equal \
+        "actions-dispatch actions-list actions-pr actions-pr-amd64 actions-push build-site check ci-local lintr mk-docs test" \
+        "$("${just_binary}" --justfile "${r_justfile}" --summary)" \
+        "R package recipe interface changed"
+
     pass "recipe interfaces match the expected commands"
 }
 
 create_mock_tools() {
     local mock_binary_directory="${temporary_directory}/mock-bin"
+    local tool
 
     mkdir -p "${mock_binary_directory}"
     export COMMAND_LOG="${temporary_directory}/commands.log"
@@ -94,9 +116,35 @@ printf '\n' >>"${COMMAND_LOG}"
 EOF
     chmod +x "${mock_binary_directory}/mock-tool"
 
-    ln -s "mock-tool" "${mock_binary_directory}/prek"
+    for tool in prek Rscript actionlint act; do
+        ln -s "mock-tool" "${mock_binary_directory}/${tool}"
+    done
 
     export PATH="${mock_binary_directory}:${PATH}"
+}
+
+test_local_ci_commands() {
+    : >"${COMMAND_LOG}"
+    "${just_binary}" --quiet --justfile "${r_justfile}" ci-local
+    assert_log_line $'actionlint'
+    assert_log_line $'Rscript\t-e\tlintr::lint_package()'
+    assert_log_line $'Rscript\t-e\tdevtools::test()'
+    assert_log_line \
+        $'Rscript\t-e\trcmdcheck::rcmdcheck(args = "--no-manual", error_on = "warning")'
+
+    pass "local CI recipes invoke the expected tools"
+}
+
+test_specialized_commands() {
+    : >"${COMMAND_LOG}"
+    "${just_binary}" --quiet --justfile "${r_justfile}" actions-pr-amd64
+
+    assert_equal \
+        "1" \
+        "$(grep -Fxc $'act\tpull_request\t--container-architecture\tlinux/amd64' "${COMMAND_LOG}")" \
+        "Apple Silicon action command changed"
+
+    pass "specialized action commands remain explicit"
 }
 
 test_git_hook_commands() {
@@ -116,6 +164,27 @@ test_git_hook_commands() {
     pass "global Git hook recipes invoke prek with the expected scope"
 }
 
+test_missing_tool_error() {
+    local isolated_binary_directory="${temporary_directory}/isolated-bin"
+    local output_file="${temporary_directory}/missing-tool.log"
+
+    mkdir -p "${isolated_binary_directory}"
+    ln -s "$(command -v bash)" "${isolated_binary_directory}/bash"
+
+    if PATH="${isolated_binary_directory}" \
+        "${just_binary}" --justfile "${r_justfile}" lintr \
+        >"${output_file}" 2>&1; then
+        fail "R lintr recipe succeeded without Rscript"
+    fi
+
+    if ! grep -Fq "Required tool not found: Rscript" "${output_file}"; then
+        cat "${output_file}" >&2
+        fail "missing-tool error was not clear"
+    fi
+
+    pass "missing tools produce a clear error"
+}
+
 main() {
     trap cleanup EXIT
     require_just
@@ -125,7 +194,10 @@ main() {
     test_parsing_and_formatting
     test_recipe_interfaces
     create_mock_tools
+    test_local_ci_commands
+    test_specialized_commands
     test_git_hook_commands
+    test_missing_tool_error
 
     echo "All justfile tests passed."
 }
