@@ -6,6 +6,7 @@ repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly repository_root
 readonly global_justfile="${repository_root}/global/justfile"
 readonly r_justfile="${repository_root}/project-specific/r/package/justfile"
+readonly python_justfile="${repository_root}/project-specific/python/package/justfile"
 just_binary="$(command -v just || true)"
 readonly just_binary
 
@@ -60,7 +61,8 @@ test_expected_files() {
 
     for justfile in \
         "${global_justfile}" \
-        "${r_justfile}"; do
+        "${r_justfile}" \
+        "${python_justfile}"; do
         [[ -f "${justfile}" ]] || fail "Expected justfile not found: ${justfile}"
     done
 
@@ -72,12 +74,15 @@ test_parsing_and_formatting() {
 
     for justfile in \
         "${global_justfile}" \
-        "${r_justfile}"; do
+        "${r_justfile}" \
+        "${python_justfile}"; do
         "${just_binary}" --justfile "${justfile}" --list >/dev/null
     done
 
     # The global file intentionally preserves the formatting of ~/.justfile.
-    "${just_binary}" --justfile "${r_justfile}" --fmt --check
+    for justfile in "${r_justfile}" "${python_justfile}"; do
+        "${just_binary}" --justfile "${justfile}" --fmt --check
+    done
 
     pass "justfiles parse and project templates are formatted"
 }
@@ -92,6 +97,11 @@ test_recipe_interfaces() {
         "actions-dispatch actions-list actions-pr actions-pr-amd64 actions-push build-site check ci-local lintr mk-docs test" \
         "$("${just_binary}" --justfile "${r_justfile}" --summary)" \
         "R package recipe interface changed"
+
+    assert_equal \
+        "actions-dispatch actions-lint actions-list actions-pr actions-pr-amd64 actions-push build-pkg ci-local format-check lint sync test typecheck" \
+        "$("${just_binary}" --justfile "${python_justfile}" --summary)" \
+        "Python package recipe interface changed"
 
     pass "recipe interfaces match the expected commands"
 }
@@ -116,7 +126,7 @@ printf '\n' >>"${COMMAND_LOG}"
 EOF
     chmod +x "${mock_binary_directory}/mock-tool"
 
-    for tool in prek Rscript actionlint act; do
+    for tool in prek Rscript actionlint act uv; do
         ln -s "mock-tool" "${mock_binary_directory}/${tool}"
     done
 
@@ -132,15 +142,27 @@ test_local_ci_commands() {
     assert_log_line \
         $'Rscript\t-e\trcmdcheck::rcmdcheck(args = "--no-manual", error_on = "warning")'
 
+    : >"${COMMAND_LOG}"
+    "${just_binary}" --quiet --justfile "${python_justfile}" ci-local
+    assert_log_line $'uv\trun\truff\tcheck\t.'
+    assert_log_line $'uv\trun\truff\tformat\t--check\t.'
+    assert_log_line $'uv\trun\tmypy\tsrc'
+    assert_log_line $'uv\trun\tpytest'
+    assert_log_line $'uv\tbuild'
+
     pass "local CI recipes invoke the expected tools"
 }
 
 test_specialized_commands() {
+    local justfile
+
     : >"${COMMAND_LOG}"
-    "${just_binary}" --quiet --justfile "${r_justfile}" actions-pr-amd64
+    for justfile in "${r_justfile}" "${python_justfile}"; do
+        "${just_binary}" --quiet --justfile "${justfile}" actions-pr-amd64
+    done
 
     assert_equal \
-        "1" \
+        "2" \
         "$(grep -Fxc $'act\tpull_request\t--container-architecture\tlinux/amd64' "${COMMAND_LOG}")" \
         "Apple Silicon action command changed"
 

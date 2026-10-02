@@ -1,0 +1,60 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set default-list
+
+[private]
+require-tool tool:
+    command -v "{{ tool }}" >/dev/null 2>&1 || { echo "Required tool not found: {{ tool }}" >&2; exit 1; }
+
+# This template uses uv by default. Replace these commands if the project uses
+# another environment or package manager.
+[group('environment')]
+sync: (require-tool "uv")
+    uv sync --all-extras
+
+[group('quality')]
+lint: (require-tool "uv")
+    uv run ruff check .
+
+[group('quality')]
+format-check: (require-tool "uv")
+    uv run ruff format --check .
+
+[group('quality')]
+typecheck target="src": (require-tool "uv")
+    uv run mypy "{{ target }}"
+
+[group('quality')]
+test: (require-tool "uv")
+    uv run pytest
+
+[group('build')]
+build-pkg: (require-tool "uv")
+    uv build
+
+[group('quality')]
+ci-local: lint format-check typecheck test build-pkg
+
+[group('github-actions')]
+actions-lint: (require-tool "actionlint")
+    actionlint
+
+[group('github-actions')]
+actions-list: (require-tool "act")
+    act --list
+
+[group('github-actions')]
+actions-pr: (require-tool "act")
+    act pull_request
+
+[group('github-actions')]
+actions-push: (require-tool "act")
+    act push
+
+[group('github-actions')]
+actions-dispatch: (require-tool "act")
+    act workflow_dispatch
+
+# Use this on Apple Silicon when the workflow image requires amd64.
+[group('github-actions')]
+actions-pr-amd64: (require-tool "act")
+    act pull_request --container-architecture linux/amd64

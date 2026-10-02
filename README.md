@@ -20,6 +20,9 @@ The first project-specific templates cover the project types used most often:
 
 ```text
 project-specific/
+├── python/
+│   └── package/
+│       └── justfile
 └── r/
     └── package/
         └── justfile
@@ -41,6 +44,13 @@ Every template requires `just`. Install additional tools as needed for the recip
 - R packages: `lintr`, `devtools`, `rcmdcheck`, and `pkgdown`
 - `actionlint` for GitHub Actions validation in `just lintr`
 - `act` and a Docker-compatible runtime for the `actions-*` recipes
+
+### Python Package
+
+- `uv` for environment management, command execution, and package builds
+- Project development dependencies: Ruff, pytest, and mypy
+- `actionlint` for `just actions-lint`
+- `act` and a Docker-compatible runtime for the remaining `actions-*` recipes
 
 ### Global Justfile
 
