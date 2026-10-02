@@ -1,0 +1,62 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+set default-list
+
+[private]
+require-tool tool:
+    command -v "{{ tool }}" >/dev/null 2>&1 || { echo "Required tool not found: {{ tool }}" >&2; exit 1; }
+
+[group('quality')]
+lint: (require-tool "nf-core")
+    nf-core pipelines lint
+
+[group('quality')]
+config: (require-tool "nextflow")
+    nextflow config .
+
+# The test profile should use a small representative dataset.
+[group('testing')]
+test profile="test,docker": (require-tool "nextflow")
+    nextflow run main.nf -profile "{{ profile }}"
+
+[group('testing')]
+test-resume profile="test,docker": (require-tool "nextflow")
+    nextflow run main.nf -profile "{{ profile }}" -resume
+
+[group('quality')]
+ci-local: lint config test
+
+# Preview cached run data before removing anything.
+[group('cleanup')]
+clean-preview: (require-tool "nextflow")
+    nextflow clean -n
+
+# Require an explicit run name or session ID so cleanup remains bounded.
+[confirm]
+[group('cleanup')]
+clean-run run: (require-tool "nextflow")
+    nextflow clean "{{ run }}" -f
+
+[group('github-actions')]
+actions-lint: (require-tool "actionlint")
+    actionlint
+
+[group('github-actions')]
+actions-list: (require-tool "act")
+    act --list
+
+[group('github-actions')]
+actions-pr: (require-tool "act")
+    act pull_request
+
+[group('github-actions')]
+actions-push: (require-tool "act")
+    act push
+
+[group('github-actions')]
+actions-dispatch: (require-tool "act")
+    act workflow_dispatch
+
+# Use this on Apple Silicon when the workflow image requires amd64.
+[group('github-actions')]
+actions-pr-amd64: (require-tool "act")
+    act pull_request --container-architecture linux/amd64

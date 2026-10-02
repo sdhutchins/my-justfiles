@@ -7,6 +7,7 @@ readonly repository_root
 readonly global_justfile="${repository_root}/global/justfile"
 readonly r_justfile="${repository_root}/project-specific/r/package/justfile"
 readonly python_justfile="${repository_root}/project-specific/python/package/justfile"
+readonly nextflow_justfile="${repository_root}/project-specific/nextflow/nf-core/justfile"
 just_binary="$(command -v just || true)"
 readonly just_binary
 
@@ -62,7 +63,8 @@ test_expected_files() {
     for justfile in \
         "${global_justfile}" \
         "${r_justfile}" \
-        "${python_justfile}"; do
+        "${python_justfile}" \
+        "${nextflow_justfile}"; do
         [[ -f "${justfile}" ]] || fail "Expected justfile not found: ${justfile}"
     done
 
@@ -75,12 +77,13 @@ test_parsing_and_formatting() {
     for justfile in \
         "${global_justfile}" \
         "${r_justfile}" \
-        "${python_justfile}"; do
+        "${python_justfile}" \
+        "${nextflow_justfile}"; do
         "${just_binary}" --justfile "${justfile}" --list >/dev/null
     done
 
     # The global file intentionally preserves the formatting of ~/.justfile.
-    for justfile in "${r_justfile}" "${python_justfile}"; do
+    for justfile in "${r_justfile}" "${python_justfile}" "${nextflow_justfile}"; do
         "${just_binary}" --justfile "${justfile}" --fmt --check
     done
 
@@ -102,6 +105,11 @@ test_recipe_interfaces() {
         "actions-dispatch actions-lint actions-list actions-pr actions-pr-amd64 actions-push build-pkg ci-local format-check lint sync test typecheck" \
         "$("${just_binary}" --justfile "${python_justfile}" --summary)" \
         "Python package recipe interface changed"
+
+    assert_equal \
+        "actions-dispatch actions-lint actions-list actions-pr actions-pr-amd64 actions-push ci-local clean-preview clean-run config lint test test-resume" \
+        "$("${just_binary}" --justfile "${nextflow_justfile}" --summary)" \
+        "nf-core recipe interface changed"
 
     pass "recipe interfaces match the expected commands"
 }
@@ -126,7 +134,7 @@ printf '\n' >>"${COMMAND_LOG}"
 EOF
     chmod +x "${mock_binary_directory}/mock-tool"
 
-    for tool in prek Rscript actionlint act uv; do
+    for tool in Rscript actionlint act nf-core nextflow prek uv; do
         ln -s "mock-tool" "${mock_binary_directory}/${tool}"
     done
 
@@ -150,6 +158,12 @@ test_local_ci_commands() {
     assert_log_line $'uv\trun\tpytest'
     assert_log_line $'uv\tbuild'
 
+    : >"${COMMAND_LOG}"
+    "${just_binary}" --quiet --justfile "${nextflow_justfile}" ci-local
+    assert_log_line $'nf-core\tpipelines\tlint'
+    assert_log_line $'nextflow\tconfig\t.'
+    assert_log_line $'nextflow\trun\tmain.nf\t-profile\ttest,docker'
+
     pass "local CI recipes invoke the expected tools"
 }
 
@@ -157,16 +171,20 @@ test_specialized_commands() {
     local justfile
 
     : >"${COMMAND_LOG}"
-    for justfile in "${r_justfile}" "${python_justfile}"; do
+    for justfile in "${r_justfile}" "${python_justfile}" "${nextflow_justfile}"; do
         "${just_binary}" --quiet --justfile "${justfile}" actions-pr-amd64
     done
 
     assert_equal \
-        "2" \
+        "3" \
         "$(grep -Fxc $'act\tpull_request\t--container-architecture\tlinux/amd64' "${COMMAND_LOG}")" \
         "Apple Silicon action command changed"
 
-    pass "specialized action commands remain explicit"
+    : >"${COMMAND_LOG}"
+    "${just_binary}" --quiet --yes --justfile "${nextflow_justfile}" clean-run test-run
+    assert_log_line $'nextflow\tclean\ttest-run\t-f'
+
+    pass "specialized action and cleanup commands remain explicit"
 }
 
 test_git_hook_commands() {

@@ -20,6 +20,9 @@ The first project-specific templates cover the project types used most often:
 
 ```text
 project-specific/
+├── nextflow/
+│   └── nf-core/
+│       └── justfile
 ├── python/
 │   └── package/
 │       └── justfile
@@ -49,6 +52,14 @@ Every template requires `just`. Install additional tools as needed for the recip
 
 - `uv` for environment management, command execution, and package builds
 - Project development dependencies: Ruff, pytest, and mypy
+- `actionlint` for `just actions-lint`
+- `act` and a Docker-compatible runtime for the remaining `actions-*` recipes
+
+### nf-core Pipeline
+
+- Nextflow and a Java runtime supported by the installed Nextflow version
+- nf-core tools
+- Docker for the default `test,docker` testing profile
 - `actionlint` for `just actions-lint`
 - `act` and a Docker-compatible runtime for the remaining `actions-*` recipes
 
@@ -120,6 +131,13 @@ just check
 Defining the underlying command once in the project `justfile` keeps local and
 CI instructions consistent and avoids duplication in documentation and workflow YAML.
 
+## Why `just`
+
+This repository uses `just` to run R, Python, Nextflow, container, and CI commands.
+Its readable syntax and recipe discovery with `just --list` make the templates
+easy to inspect and use. Projects that need a build dependency graph can use Make
+for its build semantics.
+
 ## Testing
 
 Run the interface tests:
@@ -128,7 +146,8 @@ Run the interface tests:
 bash tests/test-justfiles.sh
 ```
 
-The tests use temporary fake executables to verify generated commands.
+The tests use temporary fake executables to verify generated commands without
+running R, Python, Nextflow, Docker, or GitHub Actions workloads.
 
 ## Contributing
 
