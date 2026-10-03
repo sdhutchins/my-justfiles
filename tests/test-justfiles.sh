@@ -51,9 +51,14 @@ assert_log_line() {
     fi
 }
 
-require_just() {
+require_tools() {
     if [[ -z "${just_binary}" ]]; then
         fail "Required tool not found: just"
+    fi
+
+    # Global recipes use zsh even though this test harness runs under Bash.
+    if ! command -v zsh >/dev/null 2>&1; then
+        fail "Required tool not found: zsh (needed by global/justfile)"
     fi
 }
 
@@ -227,7 +232,7 @@ test_missing_tool_error() {
 
 main() {
     trap cleanup EXIT
-    require_just
+    require_tools
 
     temporary_directory="$(mktemp -d)"
     test_expected_files

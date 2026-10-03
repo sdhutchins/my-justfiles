@@ -74,7 +74,7 @@ project-level utilities. Install only the tools needed for the recipes you use.
 
 ### Repository Tests
 
-The local test requires Bash and `just`. ShellCheck is also recommended when
+The local test requires Bash, `just`, and `zsh`. ShellCheck is also recommended when
 modifying the test script.
 
 ## Usage
