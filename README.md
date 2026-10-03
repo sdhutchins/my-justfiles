@@ -81,4 +81,4 @@ The CI workflow also checks Markdown style, shell scripts, and documentation lin
 
 ## Authors
 
-Shaurita D. Hutchins.
+[Shaurita D. Hutchins](https://github.com/sdhutchins) · [✉️](mailto:shaurita.d.hutchins@gmail.com)
