@@ -1,22 +1,45 @@
-name: Lint Markdown and shell
+name: CI
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  super-linter:
-    name: Markdown and ShellCheck
+  test:
+    name: Test justfile templates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install just
+        uses: extractions/setup-just@v4
+        with:
+          just-version: "1.58.0"
+
+      - name: Install zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zsh
+
+      - name: Test justfiles
+        run: bash tests/test-justfiles.sh
+
+  lint:
+    name: Lint and documentation checks
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       statuses: write
 
     steps:
-      - name: Checkout Code
+      - name: Check out repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -33,11 +56,8 @@ jobs:
           LINTER_RULES_PATH: .
           MARKDOWN_CONFIG_FILE: .markdownlint.json
 
-  markdown-check-links:
-    name: Markdown - checking links
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v7
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - name: Check Markdown links
+        if: ${{ !cancelled() }}
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           config-file: ".markdownlint.json"

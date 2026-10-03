@@ -1,7 +1,6 @@
 # My Justfiles
 
-[![Test](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/test-justfiles.yml?branch=main&label=Test)](https://github.com/sdhutchins/my-justfiles/actions/workflows/test-justfiles.yml)
-[![Linting](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/linters.yml?branch=main&label=Linting)](https://github.com/sdhutchins/my-justfiles/actions/workflows/linters.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/ci.yml?branch=main&label=CI)](https://github.com/sdhutchins/my-justfiles/actions/workflows/ci.yml)
 
 A personal library of reusable [`just`](https://just.systems/) files for individual projects
 and commands used across projects.
@@ -151,8 +150,9 @@ bash tests/test-justfiles.sh
 
 The tests use temporary fake executables to verify generated commands without
 running R, Python, Nextflow, Docker, or GitHub Actions workloads. The
-`Test justfiles` workflow runs the test on pushes, pull requests, and manual
-dispatches.
+`CI` workflow runs the tests and a separate lint/documentation job on pushes,
+pull requests, and manual dispatches. The latter checks Markdown style, shell
+scripts, and Markdown links.
 
 ## Contributing
 
