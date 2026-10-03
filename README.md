@@ -2,163 +2,83 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/sdhutchins/my-justfiles/ci.yml?branch=main&label=CI)](https://github.com/sdhutchins/my-justfiles/actions/workflows/ci.yml)
 
-A personal library of reusable [`just`](https://just.systems/) files for individual projects
-and commands used across projects.
+A personal library of reusable [`just` files](https://just.systems/).
+
+## Table of Contents
+
+- [Project Background](#project-background)
+- [Install & Setup](#install--setup)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Authors](#authors)
+
+## Project Background
 
 While just is not typically used in bioinformatics, I've adopted it because it is simpler
 than make and helps improve reproducibility within and across projects on my systems.
 
-## Repository Structure
+## Install & Setup
 
-```text
-global/
-    Personal commands used across repositories and from the home directory.
+Install `just` and the tools needed for the recipes you use. Project templates
+use Bash. My global justfile uses `zsh`.
 
-project-specific/
-    Copyable templates organized by ecosystem and project archetype.
-```
+| Justfile | Recipe dependencies |
+| --- | --- |
+| [R package](project-specific/r/package/justfile) | R, `lintr`, `devtools`, `rcmdcheck`, `pkgdown` |
+| [Python package](project-specific/python/package/justfile) | `uv`, Ruff, pytest, mypy |
+| [nf-core pipeline](project-specific/nextflow/nf-core/justfile) | Nextflow, compatible Java, nf-core tools, Docker for the default test profile |
+| [Global](global/justfile) | Personal tools and scripts referenced by each recipe; `prek` for Git hooks |
 
-The first project-specific templates cover the project types used most often:
+`actionlint` checks workflow files. `act` runs workflows locally using a
+Docker-compatible runtime. In the R template, `just lintr` also runs `actionlint`.
 
-```text
-project-specific/
-├── nextflow/
-│   └── nf-core/
-│       └── justfile
-├── python/
-│   └── package/
-│       └── justfile
-└── r/
-    └── package/
-        └── justfile
-```
-
-New templates should follow the same hierarchy:
-
-```text
-project-specific/<ecosystem>/<project-archetype>/justfile
-```
-
-## Requirements
-
-Every template requires `just`. Install additional tools as needed for the recipes you use.
-
-### R Package
-
-- R, including `Rscript`
-- R packages: `lintr`, `devtools`, `rcmdcheck`, and `pkgdown`
-- `actionlint` for GitHub Actions validation in `just lintr`
-- `act` and a Docker-compatible runtime for the `actions-*` recipes
-
-### Python Package
-
-- `uv` for environment management, command execution, and package builds
-- Project development dependencies: Ruff, pytest, and mypy
-- `actionlint` for `just actions-lint`
-- `act` and a Docker-compatible runtime for the remaining `actions-*` recipes
-
-### nf-core Pipeline
-
-- Nextflow and a Java runtime supported by the installed Nextflow version
-- nf-core tools
-- Docker for the default `test,docker` testing profile
-- `actionlint` for `just actions-lint`
-- `act` and a Docker-compatible runtime for the remaining `actions-*` recipes
-
-### Global Justfile
-
-The global justfile requires `zsh`. Its personal recipes use additional tools,
-including Git, GitHub CLI, `uv`, `prek`, Conda, Homebrew, Node.js, Ruby, and
-project-level utilities. Install only the tools needed for the recipes you use.
-
-### Repository Tests
-
-The local test requires Bash, `just`, and `zsh`. ShellCheck is also recommended when
-modifying the test script.
-
-## Usage
-
-Copy a template into a project:
+Copy the appropriate template into an existing project:
 
 ```bash
 cp project-specific/r/package/justfile ~/projects/my-package/justfile
 ```
 
-Inspect a template without copying it:
+For personal commands, review the paths and scripts in `global/justfile` before
+copying it to `~/.justfile`.
+
+## Usage
+
+From a project containing a justfile, list its recipes and run a task:
+
+```bash
+just --list
+just test
+```
+
+To inspect a template before copying it:
 
 ```bash
 just --justfile project-specific/r/package/justfile --list
 ```
 
-The file at `global/justfile` is a tracked copy of my personal justfile used
-from the `home` directory. Copy it to `~/.justfile` only after reviewing paths and
-commands that are specific to your local system.
+The global Git hook recipes use the current repository's `.pre-commit-config.yaml`.
+`hooks-install` installs hooks. `hooks-run` checks staged files. `hooks-all`
+checks all tracked files after confirmation. `hooks-update-check` reports available
+updates. `hooks-update` applies them after confirmation.
 
-### Git Hooks
+## Contributing
 
-Repositories define their checks in `.pre-commit-config.yaml`; the global
-justfile provides a consistent interface for running them with `prek`:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for template conventions and contribution guidance.
 
-```bash
-just hooks-install
-just hooks-run
-just hooks-all
-just hooks-update-check
-just hooks-update
-```
-
-`hooks-run` checks staged files. `hooks-all` checks every tracked file and asks
-for confirmation because formatters may modify files. `hooks-update-check`
-reports available hook updates without editing the configuration, while
-`hooks-update` updates pinned revisions after confirmation.
-
-## Tool Roles
-
-I also use these tools to check my projects:
-
-- [prek](https://prek.j178.dev/) manages Git hooks. I use it to run each repository's formatting and code checks.
-- [actionlint](https://github.com/rhysd/actionlint) checks GitHub Actions workflow files for syntax and expression errors.
-- [act](https://nektosact.com/) runs supported GitHub Actions jobs locally so I can test and debug workflows on my machine.
-- [GitHub Actions](https://docs.github.com/en/actions) runs automated checks when I push changes or open pull requests.
-
-## Shared Local and CI Commands
-
-Project templates provide short commands for both local use and GitHub Actions.
-For example, an R package developer and the package's workflow can both run:
-
-```bash
-just check
-```
-
-Defining the underlying command once in the project `justfile` keeps local and
-CI instructions consistent and avoids duplication in documentation and workflow YAML.
-
-## Why `just`
-
-This repository uses `just` to run R, Python, Nextflow, container, and CI commands.
-Its readable syntax and recipe discovery with `just --list` make the templates
-easy to inspect and use. Projects that need a build dependency graph can use Make
-for its build semantics.
-
-## Testing
-
-Run the same interface tests used by GitHub Actions:
+With Bash, `just`, and `zsh` installed, run the repository tests:
 
 ```bash
 bash tests/test-justfiles.sh
 ```
 
-The tests use temporary fake executables to verify generated commands without
-running R, Python, Nextflow, Docker, or GitHub Actions workloads. The
-`CI` workflow runs the tests and a separate lint/documentation job on pushes,
-pull requests, and manual dispatches. The latter checks Markdown style, shell
-scripts, and Markdown links.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidance. Keep new
-templates focused, explicit, and understandable from a single file.
+The tests check parsing, formatting, and recipe commands using temporary mock tools.
+The CI workflow also checks Markdown style, shell scripts, and documentation links.
 
 ## License
 
-This repository is available under the [MIT License](LICENSE).
+[MIT License](LICENSE).
+
+## Authors
+
+Shaurita D. Hutchins.
