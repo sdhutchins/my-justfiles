@@ -246,4 +246,4 @@ backup:
 # Organize Downloads
 [group('system')]
 organize:
-    python3 "{{home}}/bin/organize_downloads.py"
+    uv run --project "{{home}}/bin" python "{{home}}/bin/organize_downloads.py"
